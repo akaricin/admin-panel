@@ -48,3 +48,7 @@
   - Cleaned up unused imports and dummy functions in DashboardCharts.tsx.
   - Fixed TypeScript error in app/admin/users/page.tsx (prop name mismatch).
   - Verified production build (npm run build) passes successfully.
+- Implemented Security Mandates for RLS Safety: [DONE]
+  - Added architectural guardrails in GEMINI.md to prohibit RLS/Schema modification.
+  - Added security documentation in lib/admin-supabase.ts to restrict Service Role usage to Data Manipulation only.
+  - Verified no rpc calls are present that could be used for DDL.

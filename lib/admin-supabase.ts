@@ -8,7 +8,9 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 }
 
 // Admin client bypasses RLS - use ONLY on server-side
-// We use the standard createClient for the service role as it's more robust for non-SSR tasks
+// SECURITY POLICY: This client is strictly for Data Manipulation (SELECT, INSERT, UPDATE, DELETE).
+// It MUST NOT be used for schema changes or modifying RLS policies.
+// The @supabase/supabase-js library used here does not support CREATE/ALTER POLICY.
 export const adminSupabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: {
     autoRefreshToken: false,
