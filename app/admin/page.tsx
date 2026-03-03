@@ -1,6 +1,6 @@
 import { adminSupabase } from '@/lib/admin-supabase'
 import { VoteVolumeBarChart, LLMPerformanceScatterPlot } from '@/components/DashboardCharts'
-import { format, subHours, subDays, startOfHour } from 'date-fns'
+import { format, subHours, subDays } from 'date-fns'
 import { Trophy, BarChart3, Activity } from 'lucide-react'
 
 export const revalidate = 60 // Revalidate every minute
@@ -64,13 +64,13 @@ export default async function AdminDashboard() {
     `)
 
   const aggregatedCaptions = topCaptionsData?.map(cap => {
-    const votes = (cap.caption_votes as any[] || [])
+    const votes = (cap.caption_votes as { vote_value: number }[] || [])
     const sum = votes.reduce((acc, v) => acc + (v.vote_value || 0), 0)
     const count = votes.length
     return {
       id: cap.id,
       content: cap.content,
-      imageUrl: (cap.images as any)?.url,
+      imageUrl: (cap.images as unknown as { url: string })?.url,
       totalValue: sum,
       totalCount: count
     }
@@ -156,7 +156,7 @@ export default async function AdminDashboard() {
                 {/* Content Section */}
                 <div className="p-6">
                   <p className="text-white font-medium leading-relaxed mb-6 italic min-h-[3rem]">
-                    "{cap.content}"
+                    &quot;{cap.content}&quot;
                   </p>
                   
                   <div className="flex items-center justify-between pt-6 border-t border-white/10">

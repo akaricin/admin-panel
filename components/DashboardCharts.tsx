@@ -1,8 +1,8 @@
 'use client'
 
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, Legend, BarChart, Bar, ScatterChart, Scatter, ZAxis 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  Legend, BarChart, Bar, ScatterChart, Scatter, ZAxis 
 } from 'recharts'
 import { format } from 'date-fns'
 
@@ -88,12 +88,12 @@ export function LLMPerformanceScatterPlot({ data, modelIds }: { data: LatencyPoi
             cursor={{ strokeDasharray: '3 3' }}
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
-                const data = payload[0].payload
+                const pData = payload[0].payload as LatencyPoint
                 return (
                   <div className="bg-white p-3 rounded-xl shadow-lg border-none text-xs">
-                    <p className="font-bold text-gray-900">Model {data.modelId}</p>
-                    <p className="text-gray-500">{format(new Date(data.timestamp), 'HH:mm:ss')}</p>
-                    <p className="text-indigo-600 font-medium">{data.processingTime}s</p>
+                    <p className="font-bold text-gray-900">Model {pData.modelId}</p>
+                    <p className="text-gray-500">{format(new Date(pData.timestamp), 'HH:mm:ss')}</p>
+                    <p className="text-indigo-600 font-medium">{pData.processingTime}s</p>
                   </div>
                 )
               }
@@ -114,8 +114,3 @@ export function LLMPerformanceScatterPlot({ data, modelIds }: { data: LatencyPoi
     </div>
   )
 }
-
-// Keep the old ones for compatibility or if needed later, 
-// but the prompt asks to refactor the dashboard to use the new ones.
-export function VotesAreaChart({ data }: { data: any[] }) { return null }
-export function LatencyMultiLineChart({ data, modelIds }: { data: any[], modelIds: any[] }) { return null }

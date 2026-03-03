@@ -119,7 +119,7 @@ export default async function ManageUsersPage({
                     <td className="px-6 py-4 text-right">
                       <UserActions 
                         userId={profile.id} 
-                        email={profile.email} 
+                        userEmail={profile.email} 
                         isSuperAdmin={profile.is_superadmin} 
                       />
                     </td>

@@ -1,6 +1,13 @@
 import { adminSupabase } from '@/lib/admin-supabase'
 import CaptionGallery from '@/components/CaptionGallery'
 
+interface Image {
+  id: string
+  url: string
+  alt_text?: string
+  captions?: { count: number }[]
+}
+
 export default async function ManageCaptionsPage() {
   // Fetch images with caption counts
   const { data: images, error: imagesError } = await adminSupabase
@@ -41,7 +48,7 @@ export default async function ManageCaptionsPage() {
           </div>
         ) : (
           <CaptionGallery 
-            initialImages={images as any} 
+            initialImages={images as unknown as Image[]} 
             typeMismatch={typeMismatch}
           />
         )}
