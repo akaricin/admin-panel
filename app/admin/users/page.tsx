@@ -1,17 +1,21 @@
 import { adminSupabase } from '@/lib/admin-supabase'
 import UserActions from '@/components/UserActions'
 import UserPagination from '@/components/UserPagination'
-import { Users, ShieldCheck, User as UserIcon } from 'lucide-react'
+import { Users, ShieldCheck, User as UserIcon, ChevronUp, ChevronDown } from 'lucide-react'
+import Link from 'next/link'
 
 const USERS_PER_PAGE = 10
 
 export default async function ManageUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; sort?: string; order?: 'asc' | 'desc' }>
 }) {
   const params = await searchParams
   const currentPage = parseInt(params.page || '1')
+  const sort = params.sort || 'created_datetime_utc'
+  const order = params.order || 'desc'
+  
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   
@@ -33,15 +37,29 @@ export default async function ManageUsersPage({
   const { data: profiles, error } = await adminSupabase
     .from('profiles')
     .select('*')
-    .order('created_datetime_utc', { ascending: false })
+    .order(sort, { ascending: order === 'asc' })
     .range(from, to)
 
   if (error) {
-    return <div className="p-8 text-red-400 font-medium">Error loading users: {error.message}</div>
+    return <div className="p-8 text-red-400 font-medium bg-[#243119]">Error loading users: {error.message}</div>
   }
 
   // Calculate stats
   const totalCount = totalUsers || 0
+
+  const getSortLink = (column: string) => {
+    const newOrder = sort === column && order === 'asc' ? 'desc' : 'asc'
+    const search = new URLSearchParams()
+    if (params.page) search.set('page', params.page)
+    search.set('sort', column)
+    search.set('order', newOrder)
+    return `?${search.toString()}`
+  }
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sort !== column) return null
+    return order === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+  }
 
   return (
     <div className="flex-1 overflow-auto bg-[#243119]">
@@ -76,9 +94,33 @@ export default async function ManageUsersPage({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/10 bg-white/5">
-                  <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider">Joined</th>
+                  <th className="px-6 py-4">
+                    <Link 
+                      href={getSortLink('first_name')}
+                      className="flex items-center gap-1 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white transition-colors"
+                    >
+                      User
+                      <SortIcon column="first_name" />
+                    </Link>
+                  </th>
+                  <th className="px-6 py-4">
+                    <Link 
+                      href={getSortLink('is_superadmin')}
+                      className="flex items-center gap-1 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white transition-colors"
+                    >
+                      Status
+                      <SortIcon column="is_superadmin" />
+                    </Link>
+                  </th>
+                  <th className="px-6 py-4">
+                    <Link 
+                      href={getSortLink('created_datetime_utc')}
+                      className="flex items-center gap-1 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white transition-colors"
+                    >
+                      Joined
+                      <SortIcon column="created_datetime_utc" />
+                    </Link>
+                  </th>
                   <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
