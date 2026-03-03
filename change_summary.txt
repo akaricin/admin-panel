@@ -52,3 +52,10 @@
   - Added architectural guardrails in GEMINI.md to prohibit RLS/Schema modification.
   - Added security documentation in lib/admin-supabase.ts to restrict Service Role usage to Data Manipulation only.
   - Verified no rpc calls are present that could be used for DDL.
+- Refactored Caption Management into Image Management: [DONE]
+  - Removed ability to update/edit captions.
+  - Removed ability to promote/demote users (removed toggleUserRole action).
+  - Implemented 'Upload New Image' functionality in app/admin/captions.
+  - Implemented 'Update Image' and 'Delete Image' functionality in the floating gallery window.
+  - Updated Navbar and Page headings to 'Manage Images' and 'Image Management'.
+  - Restricted profiles table modification at the application level by removing all update actions.

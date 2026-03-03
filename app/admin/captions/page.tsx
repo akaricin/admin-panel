@@ -8,7 +8,7 @@ interface Image {
   captions?: { count: number }[]
 }
 
-export default async function ManageCaptionsPage() {
+export default async function ManageImagesPage() {
   // Fetch images with caption counts
   const { data: images, error: imagesError } = await adminSupabase
     .from('images')
@@ -38,8 +38,8 @@ export default async function ManageCaptionsPage() {
     <div className="flex-1 overflow-auto bg-[#243119]">
       <div className="p-8 max-w-7xl mx-auto space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">Caption Management</h1>
-          <p className="text-white/60">Click an image to view and edit its captions.</p>
+          <h1 className="text-2xl font-bold text-white">Image Management</h1>
+          <p className="text-white/60">Upload new images, update existing ones, or delete them from the gallery.</p>
         </div>
         
         {images.length === 0 ? (

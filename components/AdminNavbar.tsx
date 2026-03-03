@@ -9,7 +9,7 @@ export default function AdminNavbar() {
   const links = [
     { name: 'Dashboard', href: '/admin' },
     { name: 'Manage Users', href: '/admin/users' },
-    { name: 'Manage Captions', href: '/admin/captions' },
+    { name: 'Manage Images', href: '/admin/captions' },
   ]
 
   return (
