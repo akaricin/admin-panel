@@ -1,23 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, X, Save, Trash2, Edit2, Loader2 } from 'lucide-react'
-import { uploadImage, updateImage, deleteImage } from '@/app/admin/captions/actions'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, X, Save, Trash2, Edit2, Loader2, ImageOff, ChevronRight } from 'lucide-react'
+import { uploadImage, updateImage, deleteImage } from '@/app/admin/content/actions'
 import { createClient } from '@/lib/supabase'
+
+interface Caption {
+  id: string
+  content: string | null
+}
 
 interface Image {
   id: string
-  url: string
-  alt_text?: string
-  captions?: { count: number }[]
-}
-
-interface UniqueImage {
-  url: string
-  alt_text?: string
-  ids: string[]
-  totalCaptions: number
-  primaryId: string
+  url: string | null
+  additional_context?: string
+  captions: { count: number }[]
+  caption_requests: { id: number }[]
 }
 
 interface Props {
@@ -27,8 +25,11 @@ interface Props {
 
 export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
-  const [selectedCaptions, setSelectedCaptions] = useState<{ id: string, content: string }[]>([])
+  
+  // Cache for fetched captions to minimize popup delay
+  const [captionsCache, setCaptionsCache] = useState<Record<string, Caption[]>>({})
   const [isLoadingCaptions, setIsLoadingCaptions] = useState(false)
+  
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -38,39 +39,35 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
   // Upload state
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [newImageUrl, setNewImageUrl] = useState('')
-  const [newImageAlt, setNewImageAlt] = useState('')
+  const [newImageContext, setNewImageContext] = useState('')
 
   // Edit state for selected image
   const [isEditing, setIsEditing] = useState(false)
   const [editUrl, setEditUrl] = useState('')
-  const [editAlt, setEditAlt] = useState('')
+  const [editContext, setEditContext] = useState('')
 
   const supabase = createClient()
 
-  // Group images by URL for deduplication
-  const uniqueImagesMap = new Map<string, UniqueImage>()
-  initialImages.forEach(img => {
-    const existing = uniqueImagesMap.get(img.url)
-    const captionCount = img.captions?.[0]?.count || 0
-    if (existing) {
-      existing.ids.push(img.id)
-      existing.totalCaptions += captionCount
-    } else {
-      uniqueImagesMap.set(img.url, {
-        url: img.url,
-        alt_text: img.alt_text,
-        ids: [img.id],
-        totalCaptions: captionCount,
-        primaryId: img.id
-      })
-    }
-  })
+  const closeModals = useCallback(() => {
+    setSelectedImageId(null)
+    setShowUploadModal(false)
+    setIsEditing(false)
+  }, [])
 
-  const uniqueImagesList = Array.from(uniqueImagesMap.values())
+  // Keyboard Support: Escape key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeModals()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [closeModals])
 
   const displayedImages = showOnlyWithCaptions 
-    ? uniqueImagesList.filter(img => img.totalCaptions > 0)
-    : uniqueImagesList
+    ? initialImages.filter(img => (img.captions?.[0]?.count || 0) > 0)
+    : initialImages
 
   // Fetch diagnostic counts
   useEffect(() => {
@@ -82,11 +79,11 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
     fetchCounts()
   }, [supabase])
 
-  const selectedImage = uniqueImagesList.find(img => img.ids.includes(selectedImageId!))
+  const selectedImage = initialImages.find(img => img.id === selectedImageId)
 
-  // Fetch captions when an image is selected
+  // Fetch captions when an image is selected if they aren't in cache
   useEffect(() => {
-    if (selectedImageId) {
+    if (selectedImageId && !captionsCache[selectedImageId]) {
       const fetchCaptions = async () => {
         setIsLoadingCaptions(true)
         const { data, error } = await supabase
@@ -97,20 +94,21 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
         if (error) {
           console.error('Error fetching captions:', error.message)
         } else {
-          setSelectedCaptions(data || [])
+          setCaptionsCache(prev => ({
+            ...prev,
+            [selectedImageId]: data || []
+          }))
         }
         setIsLoadingCaptions(false)
       }
       fetchCaptions()
-    } else {
-      setSelectedCaptions([])
     }
-  }, [selectedImageId, supabase])
+  }, [selectedImageId, supabase, captionsCache])
 
   useEffect(() => {
     if (selectedImage) {
-      setEditUrl(selectedImage.url)
-      setEditAlt(selectedImage.alt_text || '')
+      setEditUrl(selectedImage.url || '')
+      setEditContext(selectedImage.additional_context || '')
     }
   }, [selectedImage])
 
@@ -119,9 +117,9 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
     if (!newImageUrl.trim()) return
     setIsUploading(true)
     try {
-      await uploadImage(newImageUrl, newImageAlt)
+      await uploadImage(newImageUrl, newImageContext)
       setNewImageUrl('')
-      setNewImageAlt('')
+      setNewImageContext('')
       setShowUploadModal(false)
     } catch (err) {
       console.error(err)
@@ -135,7 +133,7 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
     if (!selectedImageId || !editUrl.trim()) return
     setIsUpdating(true)
     try {
-      await updateImage(selectedImageId, editUrl, editAlt)
+      await updateImage(selectedImageId, editUrl, editContext)
       setIsEditing(false)
     } catch (err) {
       console.error(err)
@@ -181,8 +179,8 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
             </span>
           </label>
           <div className="h-4 w-px bg-white/10" />
-          <span className="text-xs text-white/40">
-            {displayedImages.length} images
+          <span className="text-xs text-white/40 font-mono tracking-tight uppercase">
+            {displayedImages.length} images total
           </span>
         </div>
 
@@ -196,65 +194,118 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {displayedImages.map((img) => (
-          <div
-            key={img.primaryId}
-            onClick={() => setSelectedImageId(img.primaryId)}
-            className="group cursor-pointer relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all hover:scale-[1.02] hover:shadow-lg shadow-sm"
-          >
-            <img
-              src={img.url}
-              alt={img.alt_text || 'Gallery Image'}
-              className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-            
-            {/* Badge */}
-            <div className="absolute top-2 right-2 bg-white text-[#243119] px-2 py-1 rounded-md shadow-md text-[10px] font-bold">
-              {img.totalCaptions} {img.totalCaptions === 1 ? 'Caption' : 'Captions'}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {displayedImages.map((img) => {
+          const captionCount = img.captions?.[0]?.count || 0
+          const hasRequests = img.caption_requests && img.caption_requests.length > 0
+          const isPending = hasRequests && captionCount === 0
+
+          return (
+            <div
+              key={img.id}
+              className="group bg-white/5 rounded-2xl overflow-hidden border border-white/10 shadow-lg transition-all hover:scale-[1.02] hover:bg-white/10 duration-300 flex flex-col min-h-0"
+            >
+              {/* Image Section */}
+              <div 
+                className="aspect-square overflow-hidden relative bg-black/20 cursor-pointer"
+                onClick={() => setSelectedImageId(img.id)}
+              >
+                {img.url ? (
+                  <img
+                    src={img.url}
+                    alt={img.additional_context || `Content for image ${img.id}`}
+                    className="h-full w-full object-cover transition-transform group-hover:scale-105 duration-500"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
+                    <ImageOff className="h-12 w-12 mb-2" />
+                    <span className="text-xs font-medium uppercase tracking-wider text-center px-4">No image URL available</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                
+                {/* Status Badge */}
+                <div className="absolute top-3 right-3">
+                  {isPending ? (
+                    <div className="flex items-center gap-1.5 bg-amber-500/90 text-white px-3 py-1 rounded-full text-[10px] font-black shadow-lg backdrop-blur-sm animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      PENDING
+                    </div>
+                  ) : captionCount > 0 ? (
+                    <div className="bg-emerald-500/90 text-white px-3 py-1 rounded-full text-[10px] font-black shadow-lg backdrop-blur-sm">
+                      COMPLETED
+                    </div>
+                  ) : (
+                    <div className="bg-white/20 text-white/70 px-3 py-1 rounded-full text-[10px] font-black shadow-lg backdrop-blur-sm">
+                      IDLE
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Card Footer */}
+              <div 
+                className="px-5 py-4 flex items-center justify-between border-t border-white/10 bg-white/[0.02] cursor-pointer hover:bg-white/[0.05] transition-colors"
+                onClick={() => setSelectedImageId(img.id)}
+              >
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none mb-1">Status</span>
+                  <span className="text-sm font-bold text-white tracking-tight">
+                    {captionCount} {captionCount === 1 ? 'Caption' : 'Captions'}
+                  </span>
+                </div>
+                <div className="flex items-center text-white/20 group-hover:text-white/60 transition-colors">
+                  <span className="text-[10px] font-bold uppercase tracking-widest mr-1 opacity-0 group-hover:opacity-100 transition-opacity">Details</span>
+                  <ChevronRight className="h-4 w-4" />
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#243119] w-full max-w-md p-6 rounded-2xl shadow-2xl border border-white/10">
+        <div 
+          className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowUploadModal(false)
+          }}
+        >
+          <div className="bg-[#243119] w-full max-w-md p-6 rounded-2xl shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-white">Upload Image</h3>
-              <button onClick={() => setShowUploadModal(false)} className="text-white/40 hover:text-white"><X className="h-5 w-5" /></button>
+              <button onClick={() => setShowUploadModal(false)} className="text-white/40 hover:text-white transition-transform hover:scale-110"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={handleUpload} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-white/40 uppercase mb-2">Image URL</label>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest">Image URL</label>
                 <input
                   type="url"
                   required
                   placeholder="https://..."
                   value={newImageUrl}
                   onChange={e => setNewImageUrl(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-white/20"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-white/40 uppercase mb-2">Alt Text (Optional)</label>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest">Description (Optional)</label>
                 <input
                   type="text"
-                  placeholder="Image description..."
-                  value={newImageAlt}
-                  onChange={e => setNewImageAlt(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                  placeholder="Provide context for captioning..."
+                  value={newImageContext}
+                  onChange={e => setNewImageContext(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-white/20"
                 />
               </div>
               <button
                 type="submit"
                 disabled={isUploading}
-                className="w-full bg-white text-[#243119] py-3 rounded-xl font-bold hover:bg-white/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full bg-white text-[#243119] py-3 mt-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-                Add Image
+                Add to Gallery
               </button>
             </form>
           </div>
@@ -263,8 +314,16 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
 
       {/* Floating Window (Image Detail/Edit) */}
       {selectedImageId && selectedImage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#243119] w-full max-w-5xl h-[80vh] rounded-2xl shadow-2xl border border-white/10 overflow-hidden flex flex-col md:flex-row relative">
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedImageId(null)
+              setIsEditing(false)
+            }
+          }}
+        >
+          <div className="bg-[#243119] w-full max-w-5xl h-[80vh] rounded-2xl shadow-2xl border border-white/10 overflow-hidden flex flex-col md:flex-row relative" onClick={e => e.stopPropagation()}>
             <button
               onClick={() => { setSelectedImageId(null); setIsEditing(false); }}
               className="absolute top-4 right-4 z-10 p-2 bg-white/10 rounded-full hover:bg-white/20 text-white/70 hover:text-white transition-colors"
@@ -275,8 +334,8 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
             {/* Left Side: Large View */}
             <div className="md:w-3/5 h-1/2 md:h-full bg-black/40 flex items-center justify-center p-8">
               <img
-                src={selectedImage.url}
-                alt={selectedImage.alt_text || 'Large View'}
+                src={selectedImage.url || ''}
+                alt={selectedImage.additional_context || 'Large View'}
                 className="max-h-full max-w-full object-contain rounded-lg shadow-xl"
               />
             </div>
@@ -285,14 +344,14 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
             <div className="md:w-2/5 h-1/2 md:h-full flex flex-col bg-[#243119] border-l border-white/10">
               <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Image Details</h2>
-                  <p className="text-white/40 text-sm">Update URL, metadata, or delete this image.</p>
+                  <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Image Data</h2>
+                  <p className="text-white/40 text-sm">Manage image metadata and review all generated captions.</p>
                 </div>
 
                 {isEditing ? (
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-white/30 uppercase tracking-widest">URL</label>
+                      <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">URL</label>
                       <input 
                         type="text" 
                         value={editUrl}
@@ -301,12 +360,12 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-white/30 uppercase tracking-widest">Alt Text</label>
-                      <input 
-                        type="text" 
-                        value={editAlt}
-                        onChange={e => setEditAlt(e.target.value)}
-                        className="w-full bg-white/5 border border-white/20 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                      <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Description</label>
+                      <textarea 
+                        rows={3}
+                        value={editContext}
+                        onChange={e => setEditContext(e.target.value)}
+                        className="w-full bg-white/5 border border-white/20 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
                       />
                     </div>
                   </div>
@@ -315,31 +374,35 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
                     <div className="space-y-4">
                       <div className="p-4 rounded-xl bg-white/5 border border-white/5">
                         <label className="block text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Source URL</label>
-                        <p className="text-xs text-white/70 break-all font-mono">{selectedImage.url}</p>
+                        <p className="text-xs text-white/70 break-all font-mono leading-relaxed">{selectedImage.url}</p>
                       </div>
                       <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                        <label className="block text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Alt Text</label>
-                        <p className="text-sm text-white/90">{selectedImage.alt_text || 'No description provided'}</p>
+                        <label className="block text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Description</label>
+                        <p className="text-sm text-white/90 leading-relaxed italic">{selectedImage.additional_context || 'No description provided'}</p>
                       </div>
                     </div>
 
                     {/* Captions Section */}
                     <div className="space-y-4">
-                      <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider flex items-center gap-2">
+                      <h3 className="text-sm font-black text-white/60 uppercase tracking-widest flex items-center gap-2">
                         Captions
-                        <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] font-black">{selectedCaptions.length}</span>
+                        <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] font-black">
+                          {captionsCache[selectedImageId]?.length ?? 0}
+                        </span>
                       </h3>
                       {isLoadingCaptions ? (
-                        <div className="flex items-center gap-2 text-white/30 text-xs">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Loading...
+                        <div className="flex items-center gap-3 text-white/30 text-xs py-4">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Fetching caption records...
                         </div>
-                      ) : selectedCaptions.length === 0 ? (
-                        <p className="text-xs text-white/20 italic">No captions found for this image.</p>
+                      ) : !captionsCache[selectedImageId] || captionsCache[selectedImageId].length === 0 ? (
+                        <div className="p-8 rounded-xl bg-white/[0.02] border border-dashed border-white/10 text-center">
+                          <p className="text-xs text-white/20 italic font-medium">No captions generated for this image yet.</p>
+                        </div>
                       ) : (
                         <div className="space-y-3">
-                          {selectedCaptions.map((cap) => (
-                            <div key={cap.id} className="p-4 rounded-xl bg-white/5 border border-white/5 text-sm text-white/80 leading-relaxed italic">
+                          {captionsCache[selectedImageId].map((cap) => (
+                            <div key={cap.id} className="p-4 rounded-xl bg-white/5 border border-white/10 text-sm text-white/90 leading-relaxed italic shadow-inner">
                               &quot;{cap.content}&quot;
                             </div>
                           ))}
@@ -357,14 +420,14 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
                     <button
                       onClick={handleUpdate}
                       disabled={isUpdating}
-                      className="flex-1 bg-white text-[#243119] py-3 rounded-xl font-bold text-sm hover:bg-white/90 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 bg-white text-[#243119] py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/90 transition-all flex items-center justify-center gap-2"
                     >
                       {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      Save
+                      Update Record
                     </button>
                     <button
                       onClick={() => setIsEditing(false)}
-                      className="px-6 py-3 border border-white/10 rounded-xl text-white/50 hover:bg-white/5 transition-all text-sm font-medium"
+                      className="px-6 py-3 border border-white/10 rounded-xl text-white/50 hover:bg-white/5 transition-all text-sm font-bold uppercase tracking-widest"
                     >
                       Cancel
                     </button>
@@ -373,7 +436,7 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
                   <div className="flex gap-4">
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-white/10 text-white py-3 rounded-xl hover:bg-white/20 transition-all font-bold text-sm border border-white/5"
+                      className="flex-1 flex items-center justify-center gap-2 bg-white/10 text-white py-3 rounded-xl hover:bg-white/20 transition-all font-black text-sm uppercase tracking-widest border border-white/5"
                     >
                       <Edit2 className="h-4 w-4" />
                       Edit Meta
@@ -381,10 +444,10 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
                     <button
                       onClick={handleDelete}
                       disabled={isDeleting}
-                      className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 py-3 rounded-xl hover:bg-red-500/20 transition-all font-bold text-sm border border-red-500/20"
+                      className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 py-3 rounded-xl hover:bg-red-500/20 transition-all font-black text-sm uppercase tracking-widest border border-red-500/20"
                     >
                       {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                      Delete
+                      Destroy
                     </button>
                   </div>
                 )}
@@ -396,16 +459,16 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
 
       {/* Diagnostic Mode */}
       <div className="mt-12 pt-8 border-t border-white/5 text-center">
-        <p className="text-xs text-white/30 uppercase tracking-widest font-semibold mb-2">Diagnostic Mode</p>
+        <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-black mb-4">Diagnostic Context</p>
         <div className="inline-flex flex-col gap-4">
-          <div className="inline-flex gap-8 text-sm text-white/50 bg-white/5 px-6 py-3 rounded-full border border-white/5">
-            <span>Images in table: <span className="font-bold text-white">{counts?.images ?? '...'}</span></span>
-            <span className="w-px h-4 bg-white/10 my-auto" />
-            <span>Captions in table: <span className="font-bold text-white">{counts?.captions ?? '...'}</span></span>
+          <div className="inline-flex gap-8 text-[10px] text-white/40 bg-white/[0.03] px-8 py-3 rounded-full border border-white/5 font-mono">
+            <span>Images: <span className="text-white">{counts?.images ?? '...'}</span></span>
+            <span className="w-px h-3 bg-white/10 my-auto" />
+            <span>Captions: <span className="text-white">{counts?.captions ?? '...'}</span></span>
           </div>
           {typeMismatch && (
-            <div className="text-red-400 text-xs font-medium animate-pulse">
-              ⚠️ Warning: Type mismatch detected between image_id columns.
+            <div className="text-red-400 text-[10px] font-black uppercase tracking-widest animate-pulse">
+              ⚠️ Warning: image_id type collision detected
             </div>
           )}
         </div>

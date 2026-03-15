@@ -48,6 +48,12 @@
   - Cleaned up unused imports and dummy functions in DashboardCharts.tsx.
   - Fixed TypeScript error in app/admin/users/page.tsx (prop name mismatch).
   - Verified production build (npm run build) passes successfully.
+- Merged Image Management (CRUD) and Content Overview into app/admin/content/page.tsx: [DONE]
+  - Updated CaptionGallery to display captions directly on cards.
+  - Added 'Pending' status logic to CaptionGallery cards.
+  - Retained Edit/Delete/Upload features in the merged view.
+  - Moved image actions to app/admin/content/actions.ts.
+  - Removed redundant 'Manage Images' link from AdminNavbar.
 - Implemented Security Mandates for RLS Safety: [DONE]
   - Added architectural guardrails in GEMINI.md to prohibit RLS/Schema modification.
   - Added security documentation in lib/admin-supabase.ts to restrict Service Role usage to Data Manipulation only.
@@ -58,4 +64,45 @@
   - Implemented 'Upload New Image' functionality in app/admin/captions.
   - Implemented 'Update Image' and 'Delete Image' functionality in the floating gallery window.
   - Updated Navbar and Page headings to 'Manage Images' and 'Image Management'.
-  - Restricted profiles table modification at the application level by removing all update actions.
+  - Restricted profiles table modification at the application level by removing all update actions. [DONE]
+  - Implemented Generation History page in app/admin/history/page.tsx: [DONE]
+    - Fetches AI generation logs from llm_model_responses table (closest match for requested generation_history).
+    - Displays Created At, Caption/Response (parsed JSON), and Model Name in a styled table.
+    - Added 'Generation History' link to AdminNavbar.
+- Phase 3 Continued: [DONE]
+  - Verified schema: llm_model_responses and humor_flavor_mix serve as generation_history and humor_mix proxies.
+  - Updated app/admin/history/page.tsx: Added Status column (Pending/Completed/Failed) and refined joins for thumbnails.
+  - Simplified app/api/generate/route.ts: Set up scaffold to fetch humor mix and return 'Ready for integration'.
+- Completed remaining Admin CRUDs and Read requirements: [DONE]
+  - Implemented Access Management (app/admin/access/page.tsx) with CRUD for allowed domains and whitelisted emails.
+  - Implemented Legal Management (app/admin/legal/page.tsx) with Read/Update/Delete for terms.
+  - Implemented Examples Management (app/admin/examples/page.tsx) with full CRUD for caption examples and image linking.
+  - Implemented AI Metadata Logs (app/admin/logs/page.tsx) with read-only breakdown of prompt chains and raw model responses.
+  - Updated AdminNavbar with simplified names (Access, Legal, Examples, AI Logs) and ensured navigation sync.
+  - Maintained consistent dark-green/pixel-art aesthetic across all new pages.
+- Modernized Admin UI with Professional Sidebar: [DONE]
+  - Created app/admin/Sidebar.tsx with grouped navigation (Overview, Access Control, Content, AI Logs).
+  - Implemented "modern green" aesthetic: bg-slate-950, emerald-500 accents, and clean sans-serif typography.
+  - Updated app/admin/layout.tsx to use a fixed sidebar (w-64) with a scrollable content area.
+  - Removed deprecated AdminNavbar.tsx component.
+  - Ensured Sidebar is positioned correctly below the global Navbar (top-16).
+- Enhanced Content Data Fetching (Pagination/Looping): [DONE]
+  - Updated app/admin/content/page.tsx with looping fetch logic using .range(start, end).
+  - Fetches all images from master vault in batches of 1,000 to bypass Supabase defaults.
+  - Added app/admin/content/loading.tsx with emerald-themed loader and blur-xl pulse effect.
+  - Displayed total image count in the Content Overview header.
+- Refactored AI Settings & Flavor Registry: [DONE]
+  - Fixed broken app/admin/settings/page.tsx: Restored data recovery from humor_themes.
+  - Implemented dynamic Slider logic for all flavors with local state management.
+  - Added upsert logic in actions.ts to handle humor mix weight updates safely.
+  - Applied modern emerald-green UI with card-based sliders and a clean registry table.
+- Split AI Logs into focused sub-pages: [DONE]
+  - Created app/admin/logs/chains/page.tsx for multi-step sequence logs.
+  - Created app/admin/logs/responses/page.tsx for raw inference audit logs with status badges and scrollable outputs.
+  - Updated Sidebar.tsx with new "Activity Logs" section containing specific links.
+  - Deleted deprecated combined logs page.
+- Implemented high-impact Public Homepage: [DONE]
+  - Created components/Carousel.tsx with infinite auto-scroll and glassmorphism cards.
+  - Updated app/page.tsx with "AI with an Attitude" hero section and emerald-green glowing theme.
+  - Implemented "Merge" strategy for public data fetching to bypass relationship errors.
+  - Added 10 high-quality mock cards as fallback for empty database states.

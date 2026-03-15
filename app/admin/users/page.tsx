@@ -56,16 +56,11 @@ export default async function ManageUsersPage({
     return `?${search.toString()}`
   }
 
-  const SortIcon = ({ column }: { column: string }) => {
-    if (sort !== column) return null
-    return order === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-  }
-
   return (
     <div className="flex-1 overflow-auto bg-[#243119]">
       <div className="p-8 max-w-7xl mx-auto space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">User Management</h1>
+          <h1 className="text-2xl text-white">User Management</h1>
           <p className="text-white/60">Manage permissions and view system users.</p>
         </div>
 
@@ -100,7 +95,7 @@ export default async function ManageUsersPage({
                       className="flex items-center gap-1 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white transition-colors"
                     >
                       User
-                      <SortIcon column="first_name" />
+                      <SortIcon column="first_name" activeColumn={sort} direction={order} />
                     </Link>
                   </th>
                   <th className="px-6 py-4">
@@ -109,7 +104,7 @@ export default async function ManageUsersPage({
                       className="flex items-center gap-1 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white transition-colors"
                     >
                       Status
-                      <SortIcon column="is_superadmin" />
+                      <SortIcon column="is_superadmin" activeColumn={sort} direction={order} />
                     </Link>
                   </th>
                   <th className="px-6 py-4">
@@ -118,7 +113,7 @@ export default async function ManageUsersPage({
                       className="flex items-center gap-1 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white transition-colors"
                     >
                       Joined
-                      <SortIcon column="created_datetime_utc" />
+                      <SortIcon column="created_datetime_utc" activeColumn={sort} direction={order} />
                     </Link>
                   </th>
                   <th className="px-6 py-4 text-xs font-semibold text-white/50 uppercase tracking-wider text-right">Actions</th>
@@ -183,6 +178,11 @@ export default async function ManageUsersPage({
       </div>
     </div>
   )
+}
+
+function SortIcon({ column, activeColumn, direction }: { column: string, activeColumn: string, direction: 'asc' | 'desc' }) {
+  if (activeColumn !== column) return null
+  return direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
 }
 
 function StatCard({ title, value, icon }: { title: string, value: string, icon: React.ReactNode }) {

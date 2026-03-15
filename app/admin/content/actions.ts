@@ -3,23 +3,23 @@
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
 
-export async function uploadImage(url: string, altText?: string) {
+export async function uploadImage(url: string, context?: string) {
   const { error } = await adminSupabase
     .from('images')
-    .insert([{ url, alt_text: altText }])
+    .insert([{ url, additional_context: context }])
 
   if (error) {
     console.error('Error uploading image:', error.message)
     throw new Error(error.message)
   }
 
-  revalidatePath('/admin/captions')
+  revalidatePath('/admin/content')
 }
 
-export async function updateImage(id: string, url: string, altText?: string) {
+export async function updateImage(id: string, url: string, context?: string) {
   const { error } = await adminSupabase
     .from('images')
-    .update({ url, alt_text: altText })
+    .update({ url, additional_context: context })
     .eq('id', id)
 
   if (error) {
@@ -27,7 +27,7 @@ export async function updateImage(id: string, url: string, altText?: string) {
     throw new Error(error.message)
   }
 
-  revalidatePath('/admin/captions')
+  revalidatePath('/admin/content')
 }
 
 export async function deleteImage(id: string) {
@@ -41,5 +41,5 @@ export async function deleteImage(id: string) {
     throw new Error(error.message)
   }
 
-  revalidatePath('/admin/captions')
+  revalidatePath('/admin/content')
 }

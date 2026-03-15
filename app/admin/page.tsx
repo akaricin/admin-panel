@@ -90,20 +90,20 @@ export default async function AdminDashboard() {
     <div className="flex-1 overflow-auto bg-[#243119]">
       <div className="p-8 max-w-7xl mx-auto space-y-12">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Admin Dashboard</h1>
+          <h1 className="text-3xl text-white">Admin Dashboard</h1>
           <p className="text-white/70 mt-1">24-hour analytics and performance overview (UTC).</p>
         </div>
 
         {/* Row 1: 24-Hour Analytics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Vote Volume Chart */}
-          <div className="bg-white/5 p-6 rounded-2xl shadow-sm border border-white/10">
+          <div className="bg-white/5 p-6 rounded-2xl shadow-sm border border-white/10 min-h-0">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-white/10 rounded-lg">
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">Vote Volume</h3>
+                <h3 className="text-white">Vote Volume</h3>
                 <p className="text-xs text-white/50">Number of votes cast (last 10 days)</p>
               </div>
             </div>
@@ -111,13 +111,13 @@ export default async function AdminDashboard() {
           </div>
 
           {/* LLM Scatter Plot */}
-          <div className="bg-white/5 p-6 rounded-2xl shadow-sm border border-white/10">
+          <div className="bg-white/5 p-6 rounded-2xl shadow-sm border border-white/10 min-h-0">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-white/10 rounded-lg">
                 <Activity className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">LLM Response Latency</h3>
+                <h3 className="text-white">LLM Response Latency</h3>
                 <p className="text-xs text-white/50">Processing time per request (last 24h)</p>
               </div>
             </div>
@@ -131,7 +131,7 @@ export default async function AdminDashboard() {
             <div className="p-2 bg-yellow-50/10 rounded-lg">
               <Trophy className="h-6 w-6 text-yellow-500" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Hall of Fame</h2>
+            <h2 className="text-2xl text-white">Hall of Fame</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
