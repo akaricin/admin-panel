@@ -2,11 +2,18 @@
 
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
+import { getCurrentUserId } from '@/lib/supabase'
 
-export async function uploadImage(url: string, context?: string) {
+export async function uploadImage(url: string, context: string) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
-    .from('images')
-    .insert([{ url, additional_context: context }])
+    .from('master_vault')
+    .insert([{ 
+      url, 
+      additional_context: context,
+      created_by_user_id: userId,
+      modified_by_user_id: userId
+    }])
 
   if (error) {
     console.error('Error uploading image:', error.message)
@@ -16,10 +23,15 @@ export async function uploadImage(url: string, context?: string) {
   revalidatePath('/admin/content')
 }
 
-export async function updateImage(id: string, url: string, context?: string) {
+export async function updateImage(id: string, url: string, context: string) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
-    .from('images')
-    .update({ url, additional_context: context })
+    .from('master_vault')
+    .update({ 
+      url, 
+      additional_context: context,
+      modified_by_user_id: userId
+    })
     .eq('id', id)
 
   if (error) {
@@ -29,6 +41,7 @@ export async function updateImage(id: string, url: string, context?: string) {
 
   revalidatePath('/admin/content')
 }
+
 
 export async function deleteImage(id: string) {
   const { error } = await adminSupabase

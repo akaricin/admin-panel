@@ -2,11 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
+import { getCurrentUserId } from '@/lib/supabase'
 
 export async function addAllowedDomain(apex_domain: string) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('allowed_signup_domains')
-    .insert([{ apex_domain }])
+    .insert([{ 
+      apex_domain,
+      created_by_user_id: userId,
+      modified_by_user_id: userId
+    }])
 
   if (error) {
     console.error('Error adding domain:', error.message)
@@ -17,6 +23,7 @@ export async function addAllowedDomain(apex_domain: string) {
 }
 
 export async function deleteAllowedDomain(id: number) {
+  // ... rest of the functions
   const { error } = await adminSupabase
     .from('allowed_signup_domains')
     .delete()
@@ -31,9 +38,14 @@ export async function deleteAllowedDomain(id: number) {
 }
 
 export async function addWhitelistedEmail(email_address: string) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('whitelist_email_addresses')
-    .insert([{ email_address }])
+    .insert([{ 
+      email_address,
+      created_by_user_id: userId,
+      modified_by_user_id: userId
+    }])
 
   if (error) {
     console.error('Error adding email:', error.message)

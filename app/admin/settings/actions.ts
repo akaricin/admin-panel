@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
+import { getCurrentUserId } from '@/lib/supabase'
 
 // --- HUMOR MIX ACTIONS ---
 
@@ -10,6 +11,7 @@ import { adminSupabase } from '@/lib/admin-supabase'
  * Using upsert to ensure even new flavors can have weights set.
  */
 export async function updateHumorMix(mixData: { humor_flavor_id: number, weight: number }[]) {
+  const userId = await getCurrentUserId()
   for (const item of mixData) {
     // We check if a record exists for this flavor in the mix
     const { data: existing } = await adminSupabase
@@ -21,14 +23,22 @@ export async function updateHumorMix(mixData: { humor_flavor_id: number, weight:
     if (existing) {
       const { error } = await adminSupabase
         .from('humor_flavor_mix')
-        .update({ caption_count: item.weight })
+        .update({ 
+          caption_count: item.weight,
+          modified_by_user_id: userId
+        })
         .eq('humor_flavor_id', item.humor_flavor_id)
       
       if (error) throw new Error(`Update failed: ${error.message}`)
     } else {
       const { error } = await adminSupabase
         .from('humor_flavor_mix')
-        .insert([{ humor_flavor_id: item.humor_flavor_id, caption_count: item.weight }])
+        .insert([{ 
+          humor_flavor_id: item.humor_flavor_id, 
+          caption_count: item.weight,
+          created_by_user_id: userId,
+          modified_by_user_id: userId
+        }])
       
       if (error) throw new Error(`Insert failed: ${error.message}`)
     }
@@ -39,18 +49,27 @@ export async function updateHumorMix(mixData: { humor_flavor_id: number, weight:
 // --- PROVIDER ACTIONS ---
 
 export async function createLLMProvider(name: string) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('llm_providers')
-    .insert([{ name }])
+    .insert([{ 
+      name,
+      created_by_user_id: userId,
+      modified_by_user_id: userId
+    }])
 
   if (error) throw new Error(error.message)
   revalidatePath('/admin/settings')
 }
 
 export async function updateLLMProvider(id: number, name: string) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('llm_providers')
-    .update({ name })
+    .update({ 
+      name,
+      modified_by_user_id: userId
+    })
     .eq('id', id)
 
   if (error) throw new Error(error.message)
@@ -75,9 +94,14 @@ export async function createLLMModel(data: {
   provider_model_id: string, 
   is_temperature_supported: boolean 
 }) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('llm_models')
-    .insert([data])
+    .insert([{
+      ...data,
+      created_by_user_id: userId,
+      modified_by_user_id: userId
+    }])
 
   if (error) throw new Error(error.message)
   revalidatePath('/admin/settings')
@@ -89,9 +113,13 @@ export async function updateLLMModel(id: number, data: {
   provider_model_id: string, 
   is_temperature_supported: boolean 
 }) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('llm_models')
-    .update(data)
+    .update({
+      ...data,
+      modified_by_user_id: userId
+    })
     .eq('id', id)
 
   if (error) throw new Error(error.message)

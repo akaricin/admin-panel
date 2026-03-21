@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
+import { getCurrentUserId } from '@/lib/supabase'
 
 export async function createCaptionExample(data: { 
   image_description: string, 
@@ -10,9 +11,14 @@ export async function createCaptionExample(data: {
   priority: number,
   image_id?: string
 }) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('caption_examples')
-    .insert([data])
+    .insert([{
+      ...data,
+      created_by_user_id: userId,
+      modified_by_user_id: userId
+    }])
 
   if (error) {
     console.error('Error creating example:', error.message)
@@ -29,11 +35,12 @@ export async function updateCaptionExample(id: number, data: {
   priority: number,
   image_id?: string
 }) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('caption_examples')
     .update({
       ...data,
-      modified_datetime_utc: new Date().toISOString()
+      modified_by_user_id: userId
     })
     .eq('id', id)
 

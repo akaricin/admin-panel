@@ -69,9 +69,15 @@ export async function signOut() {
 }
 
 export async function toggleAdminStatus(userId: string, currentStatus: boolean) {
+  const supabase = await getSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
   const { error } = await adminSupabase
     .from('profiles')
-    .update({ is_superadmin: !currentStatus })
+    .update({ 
+      is_superadmin: !currentStatus,
+      modified_by_user_id: user?.id
+    })
     .eq('id', userId)
 
   if (error) {

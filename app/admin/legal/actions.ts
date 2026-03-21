@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
+import { getCurrentUserId } from '@/lib/supabase'
 
 export async function updateTerm(id: number, data: { term: string, definition: string, example: string, priority: number }) {
+  const userId = await getCurrentUserId()
   const { error } = await adminSupabase
     .from('terms')
     .update({
@@ -11,7 +13,7 @@ export async function updateTerm(id: number, data: { term: string, definition: s
       definition: data.definition,
       example: data.example,
       priority: data.priority,
-      modified_datetime_utc: new Date().toISOString()
+      modified_by_user_id: userId
     })
     .eq('id', id)
 
