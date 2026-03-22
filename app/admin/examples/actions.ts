@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
-import { getCurrentUserId } from '@/lib/supabase'
+import { getCurrentUserId } from '@/lib/supabase-server'
 
 export async function createCaptionExample(data: { 
   image_description: string, 

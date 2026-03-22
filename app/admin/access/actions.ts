@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
-import { getCurrentUserId } from '@/lib/supabase'
+import { getCurrentUserId } from '@/lib/supabase-server'
 
 export async function addAllowedDomain(apex_domain: string) {
   const userId = await getCurrentUserId()

@@ -2,12 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { adminSupabase } from '@/lib/admin-supabase'
-import { getCurrentUserId } from '@/lib/supabase'
+import { getCurrentUserId } from '@/lib/supabase-server'
 
 export async function uploadImage(url: string, context: string) {
   const userId = await getCurrentUserId()
   const { error } = await adminSupabase
-    .from('master_vault')
+    .from('images')
     .insert([{ 
       url, 
       additional_context: context,
@@ -26,7 +26,7 @@ export async function uploadImage(url: string, context: string) {
 export async function updateImage(id: string, url: string, context: string) {
   const userId = await getCurrentUserId()
   const { error } = await adminSupabase
-    .from('master_vault')
+    .from('images')
     .update({ 
       url, 
       additional_context: context,

@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, X, Save, Trash2, Edit2, Loader2, ImageOff, ChevronRight } from 'lucide-react'
-import { uploadImage, updateImage, deleteImage } from '@/app/admin/content/actions'
+import { updateImage, deleteImage } from '@/app/admin/content/actions'
 import { createClient } from '@/lib/supabase'
+import ImageUploader from '@/components/ImageUploader'
+import { useRouter } from 'next/navigation'
 
 interface Caption {
   id: string
@@ -24,6 +26,7 @@ interface Props {
 }
 
 export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
+  const router = useRouter()
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   
   // Cache for fetched captions to minimize popup delay
@@ -32,14 +35,11 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
   
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
   const [showOnlyWithCaptions, setShowOnlyWithCaptions] = useState(false)
   const [counts, setCounts] = useState<{ images: number, captions: number } | null>(null)
 
   // Upload state
   const [showUploadModal, setShowUploadModal] = useState(false)
-  const [newImageUrl, setNewImageUrl] = useState('')
-  const [newImageContext, setNewImageContext] = useState('')
 
   // Edit state for selected image
   const [isEditing, setIsEditing] = useState(false)
@@ -111,23 +111,6 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
       setEditContext(selectedImage.additional_context || '')
     }
   }, [selectedImage])
-
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newImageUrl.trim()) return
-    setIsUploading(true)
-    try {
-      await uploadImage(newImageUrl, newImageContext)
-      setNewImageUrl('')
-      setNewImageContext('')
-      setShowUploadModal(false)
-    } catch (err) {
-      console.error(err)
-      alert('Failed to upload image.')
-    } finally {
-      setIsUploading(false)
-    }
-  }
 
   const handleUpdate = async () => {
     if (!selectedImageId || !editUrl.trim()) return
@@ -272,42 +255,19 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
             if (e.target === e.currentTarget) setShowUploadModal(false)
           }}
         >
-          <div className="bg-[#243119] w-full max-w-md p-6 rounded-2xl shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#243119] w-full max-w-xl p-8 rounded-2xl shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-white">Upload Image</h3>
+              <h3 className="text-xl font-bold text-white uppercase tracking-tight">Upload New Image</h3>
               <button onClick={() => setShowUploadModal(false)} className="text-white/40 hover:text-white transition-transform hover:scale-110"><X className="h-5 w-5" /></button>
             </div>
-            <form onSubmit={handleUpload} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest">Image URL</label>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://..."
-                  value={newImageUrl}
-                  onChange={e => setNewImageUrl(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-white/20"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest">Description (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="Provide context for captioning..."
-                  value={newImageContext}
-                  onChange={e => setNewImageContext(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 placeholder:text-white/20"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={isUploading}
-                className="w-full bg-white text-[#243119] py-3 mt-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-                Add to Gallery
-              </button>
-            </form>
+            
+            <ImageUploader 
+              onSuccess={() => {
+                setShowUploadModal(false)
+                router.refresh()
+              }}
+              onCancel={() => setShowUploadModal(false)}
+            />
           </div>
         </div>
       )}
