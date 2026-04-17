@@ -14,7 +14,8 @@ import {
   Database,
   LayoutDashboard,
   LayoutGrid,
-  ChevronRight
+  ChevronRight,
+  Activity
 } from 'lucide-react'
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
     title: 'Overview',
     items: [
       { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+      { name: 'Statistics', href: '/admin/statistics', icon: Activity },
       { name: 'Content Gallery', href: '/admin/content', icon: LayoutGrid },
     ]
   },

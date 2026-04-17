@@ -23,9 +23,10 @@ interface Image {
 interface Props {
   initialImages: Image[]
   typeMismatch?: boolean
+  totalImages: number
 }
 
-export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
+export default function CaptionGallery({ initialImages, typeMismatch, totalImages }: Props) {
   const router = useRouter()
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   
@@ -69,15 +70,14 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
     ? initialImages.filter(img => (img.captions?.[0]?.count || 0) > 0)
     : initialImages
 
-  // Fetch diagnostic counts
+  // Fetch diagnostic counts (optional since totalImages is provided)
   useEffect(() => {
     const fetchCounts = async () => {
-      const { count: imgCount } = await supabase.from('images').select('*', { count: 'exact', head: true })
       const { count: capCount } = await supabase.from('captions').select('*', { count: 'exact', head: true })
-      setCounts({ images: imgCount || 0, captions: capCount || 0 })
+      setCounts({ images: totalImages, captions: capCount || 0 })
     }
     fetchCounts()
-  }, [supabase])
+  }, [supabase, totalImages])
 
   const selectedImage = initialImages.find(img => img.id === selectedImageId)
 
@@ -160,6 +160,11 @@ export default function CaptionGallery({ initialImages, typeMismatch }: Props) {
             <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">
               Only with captions
             </span>
+            {showOnlyWithCaptions && (
+              <span className="text-[9px] text-amber-400 font-bold uppercase ml-2 animate-pulse tracking-widest">
+                (Page Filter Only)
+              </span>
+            )}
           </label>
           <div className="h-4 w-px bg-white/10" />
           <span className="text-xs text-white/40 font-mono tracking-tight uppercase">

@@ -58,7 +58,7 @@ export default function Carousel({ items }: Props) {
                   <Sparkles className="h-3 w-3 text-emerald-400 opacity-50" />
                   <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Generated Caption</span>
                 </div>
-                <p className="text-sm font-bold text-white/80 leading-relaxed italic line-clamp-3">
+                <p className="text-sm font-bold text-emerald-400/90 leading-relaxed italic line-clamp-3">
                   &quot;{item.caption}&quot;
                 </p>
               </div>

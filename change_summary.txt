@@ -80,29 +80,46 @@
   - Implemented AI Metadata Logs (app/admin/logs/page.tsx) with read-only breakdown of prompt chains and raw model responses.
   - Updated AdminNavbar with simplified names (Access, Legal, Examples, AI Logs) and ensured navigation sync.
   - Maintained consistent dark-green/pixel-art aesthetic across all new pages.
-- Modernized Admin UI with Professional Sidebar: [DONE]
-  - Created app/admin/Sidebar.tsx with grouped navigation (Overview, Access Control, Content, AI Logs).
-  - Implemented "modern green" aesthetic: bg-slate-950, emerald-500 accents, and clean sans-serif typography.
-  - Updated app/admin/layout.tsx to use a fixed sidebar (w-64) with a scrollable content area.
-  - Removed deprecated AdminNavbar.tsx component.
-  - Ensured Sidebar is positioned correctly below the global Navbar (top-16).
-- Enhanced Content Data Fetching (Pagination/Looping): [DONE]
-  - Updated app/admin/content/page.tsx with looping fetch logic using .range(start, end).
-  - Fetches all images from master vault in batches of 1,000 to bypass Supabase defaults.
-  - Added app/admin/content/loading.tsx with emerald-themed loader and blur-xl pulse effect.
-  - Displayed total image count in the Content Overview header.
-- Refactored AI Settings & Flavor Registry: [DONE]
-  - Fixed broken app/admin/settings/page.tsx: Restored data recovery from humor_themes.
-  - Implemented dynamic Slider logic for all flavors with local state management.
-  - Added upsert logic in actions.ts to handle humor mix weight updates safely.
-  - Applied modern emerald-green UI with card-based sliders and a clean registry table.
-- Split AI Logs into focused sub-pages: [DONE]
-  - Created app/admin/logs/chains/page.tsx for multi-step sequence logs.
-  - Created app/admin/logs/responses/page.tsx for raw inference audit logs with status badges and scrollable outputs.
-  - Updated Sidebar.tsx with new "Activity Logs" section containing specific links.
-  - Deleted deprecated combined logs page.
-- Implemented high-impact Public Homepage: [DONE]
-  - Created components/Carousel.tsx with infinite auto-scroll and glassmorphism cards.
-  - Updated app/page.tsx with "AI with an Attitude" hero section and emerald-green glowing theme.
-  - Implemented "Merge" strategy for public data fetching to bypass relationship errors.
-  - Added 10 high-quality mock cards as fallback for empty database states.
+- Modernized Admin UI with Professional Sidebar. [DONE]
+- Enhanced Content Data Fetching (Pagination/Looping). [DONE]
+- Refactored AI Settings & Flavor Registry. [DONE]
+- Split AI Logs into focused sub-pages. [DONE]
+- Implemented high-impact Public Homepage. [DONE]
+- Verified all INSERT and UPDATE operations for created_by_user_id and modified_by_user_id. [DONE]
+- Fixed 'master_vault' typo in app/admin/content/actions.ts (changed to 'images'). [DONE]
+- Fixed Vercel build failure by splitting lib/supabase.ts into client and server (lib/supabase-server.ts) utilities. [DONE]
+- Replaced URL-based image upload with a modern drag-and-drop uploader in Image Management. [DONE]
+  - Created components/ImageUploader.tsx for handling file drops, previews, and Supabase Storage uploads.
+  - Configured unique filename generation and Public URL retrieval.
+  - Integrated storage upload with existing database sync via uploadImage server action.
+  - Added visual feedback (loading spinners, emerald-green theme, error alerts).
+- Verified project builds successfully for production deployment. [DONE]
+- Implemented Engagement Statistics page (app/admin/statistics/page.tsx): [DONE]
+  - Displays key metrics: Total Captions, Average User Rating, and Top Performing Flavor.
+  - Includes Vote Distribution bar chart (CSS-based).
+  - Includes Leaderboard of top 5 highest-rated captions with thumbnails.
+  - Added 'Refresh Data' button via server action revalidation.
+  - Integrated into Sidebar under Overview section.
+  - Maintained Emerald-Green and Dark theme.
+- Fixed Homepage Wheel JSON display issues: [DONE]
+  - Refactored app/page.tsx to fetch from 'captions' table using caption_text and metadata columns.
+  - Implemented robust JSON parsing and fallback logic (extracting topic_summary from caption_topic_plan).
+  - Added UI cleanup to strip JSON artifacts (braces, quotes, key names) from displayed text.
+  - Implemented pseudo-random in-memory shuffle and 15-item limit for fresh content on every refresh.
+  - Applied Emerald-Green theme styling (text-emerald-400/90) to Carousel caption text for visual consistency.
+- Resolved "statement timeout" in Content Overview page: [DONE]
+- Implemented Score Frequency Distribution on Statistics page: [DONE]
+  - Replaced legacy star-based vote distribution with aggregate score frequency chart.
+  - Developed ScoreFrequencyChart component using Recharts with conditional bar coloring (Rose/Gray/Emerald).
+  - Implemented robust paginated fetching for 'caption_scores' table to handle large datasets.
+  - Added 'Total Captions Processed' badge for data verification.
+  - Integrated into the existing Emerald/Dark administrative theme.
+
+  - Replaced sequential batch fetching loop with standard server-side pagination (60 images per page).
+  - Created reusable GalleryPagination component for URL-based navigation.
+  - Updated app/admin/content/page.tsx to handle searchParams and provide global image counts.
+  - Updated CaptionGallery component to support paginated data and added visual feedback for page-level filtering.
+  - Optimized database queries by eliminating heavy sub-query loops across large datasets.
+
+
+

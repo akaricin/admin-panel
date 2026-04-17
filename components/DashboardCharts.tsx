@@ -2,13 +2,18 @@
 
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Legend, BarChart, Bar, ScatterChart, Scatter, ZAxis 
+  Legend, BarChart, Bar, ScatterChart, Scatter, ZAxis, Cell 
 } from 'recharts'
 import { format } from 'date-fns'
 
 interface VotesData {
   hour: string
   count: number
+}
+
+interface ScoreData {
+  score: number
+  frequency: number
 }
 
 interface LatencyPoint {
@@ -18,6 +23,46 @@ interface LatencyPoint {
 }
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+
+export function ScoreFrequencyChart({ data }: { data: ScoreData[] }) {
+  return (
+    <div className="h-[350px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+          <XAxis 
+            dataKey="score" 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#ffffff40', fontWeight: 'bold' }}
+          />
+          <YAxis 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#ffffff40', fontWeight: 'bold' }}
+          />
+          <Tooltip 
+            cursor={{ fill: '#ffffff05' }}
+            contentStyle={{ backgroundColor: '#020617', borderRadius: '16px', border: '1px solid #ffffff10', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.5)' }}
+            itemStyle={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}
+            labelStyle={{ color: '#ffffff40', fontSize: '10px', marginBottom: '4px', fontWeight: 'black' }}
+          />
+          <Bar 
+            dataKey="frequency" 
+            radius={[4, 4, 0, 0]} 
+          >
+            {data.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`} 
+                fill={entry.score < 0 ? '#f43f5e' : entry.score === 0 ? '#6b7280' : '#10b981'} 
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
 
 export function VoteVolumeBarChart({ data }: { data: VotesData[] }) {
   return (
