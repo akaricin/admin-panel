@@ -22,12 +22,7 @@ export default async function PromptChainsPage() {
       .select('id, llm_prompt_chain_id, llm_system_prompt, humor_flavor_id')
   ])
 
-  // 2. Terminal logging for debugging
-  console.log('--- DEBUG: Prompt Chains Merge Strategy ---')
-  console.log('Chains Data:', JSON.stringify(chainsRes.data?.slice(0, 2), null, 2))
-  console.log('Chains Error:', chainsRes.error)
-  console.log('Requests Count:', requestsRes.data?.length || 0)
-  console.log('Responses Count:', responsesRes.data?.length || 0)
+  // 2. Terminal logging for debugging removed
 
   // 3. Error Handling
   if (chainsRes.error) {
