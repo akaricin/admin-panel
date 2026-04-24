@@ -13,8 +13,8 @@ export default async function AdminDashboard() {
   // 1. Fetch Vote Volume for last 10 days
   const { data: votes } = await adminSupabase
     .from('caption_votes')
-    .select('created_at')
-    .gte('created_at', tenDaysAgo.toISOString())
+    .select('created_datetime_utc')
+    .gte('created_datetime_utc', tenDaysAgo.toISOString())
 
   // Group by day
   const dailyVotesMap = new Map<string, number>()
@@ -26,7 +26,7 @@ export default async function AdminDashboard() {
   }
 
   votes?.forEach(v => {
-    const date = new Date(v.created_at)
+    const date = new Date(v.created_datetime_utc)
     const dayLabel = format(date, 'MMM dd')
     if (dailyVotesMap.has(dayLabel)) {
       dailyVotesMap.set(dayLabel, (dailyVotesMap.get(dayLabel) || 0) + 1)

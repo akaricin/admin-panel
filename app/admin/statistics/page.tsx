@@ -54,15 +54,13 @@ export default async function StatisticsPage() {
     .map(([score, freq]) => ({ score: parseInt(score), frequency: freq }))
     .sort((a, b) => a.score - b.score)
 
-  // Average User Rating
+  // Total Net Score
   const { data: allVotes } = await adminSupabase
     .from('caption_votes')
     .select('vote_value')
 
   const totalVotesCount = allVotes?.length || 0
-  const avgRating = totalVotesCount > 0 
-    ? (allVotes!.reduce((acc, v) => acc + (v.vote_value || 0), 0) / totalVotesCount).toFixed(2)
-    : '0.00'
+  const totalNetScore = allVotes?.reduce((acc, v) => acc + (v.vote_value || 0), 0) || 0
 
   // Top Performing Flavor
   const [captionsRes, flavorsRes] = await Promise.all([
@@ -93,15 +91,12 @@ export default async function StatisticsPage() {
   })
 
   let topFlavorName = 'N/A'
-  let topFlavorAvg = 0
+  let topFlavorScore = 0
   
   Object.entries(flavorStats).forEach(([fid, stats]) => {
-    if (stats.count > 0) {
-      const avg = stats.sum / stats.count
-      if (avg > topFlavorAvg) {
-        topFlavorAvg = avg
-        topFlavorName = flavorMap.get(Number(fid)) || 'Unknown'
-      }
+    if (stats.sum > topFlavorScore) {
+      topFlavorScore = stats.sum
+      topFlavorName = flavorMap.get(Number(fid)) || 'Unknown'
     }
   })
 
@@ -112,11 +107,11 @@ export default async function StatisticsPage() {
     const count = votes.length
     return {
       ...cap,
-      avgScore: count > 0 ? sum / count : 0,
+      netScore: sum,
       totalVotes: count
     }
   })
-  .sort((a, b) => b.avgScore - a.avgScore || b.totalVotes - a.totalVotes)
+  .sort((a, b) => b.netScore - a.netScore || b.totalVotes - a.totalVotes)
   .slice(0, 5)
 
   const topIds = aggregatedCaptions.map(c => c.id)
@@ -192,8 +187,8 @@ export default async function StatisticsPage() {
             <div className="absolute -right-4 -top-4 text-white/5 group-hover:text-white/10 transition-colors">
               <Star className="h-24 w-24" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Avg User Rating</p>
-            <h2 className="text-5xl font-black italic text-emerald-400">{avgRating}</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Global Net Score</p>
+            <h2 className="text-5xl font-black italic text-emerald-400">{totalNetScore > 0 ? `+${totalNetScore}` : totalNetScore}</h2>
             <div className="mt-4 flex items-center gap-2 text-white/40 text-[10px] font-black uppercase tracking-widest">
               From {totalVotesCount.toLocaleString()} total votes
             </div>
@@ -206,7 +201,7 @@ export default async function StatisticsPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Top Flavor</p>
             <h2 className="text-4xl font-black italic text-white uppercase truncate">{topFlavorName}</h2>
             <div className="mt-4 flex items-center gap-2 text-yellow-400 text-[10px] font-black uppercase tracking-widest">
-              Rating: {topFlavorAvg.toFixed(2)} / 5.0
+              Net Score: {topFlavorScore > 0 ? `+${topFlavorScore}` : topFlavorScore}
             </div>
           </div>
         </div>
@@ -242,7 +237,7 @@ export default async function StatisticsPage() {
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-xl italic font-black uppercase tracking-widest text-white">Leaderboard</h3>
               <div className="px-3 py-1 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-white/40">
-                Top 5 Rated
+                Top 5 Scorers
               </div>
             </div>
 
@@ -271,7 +266,7 @@ export default async function StatisticsPage() {
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-white/30">
-                        Avg Score: {item.avgScore.toFixed(2)}
+                        Net Score: {item.netScore > 0 ? `+${item.netScore}` : item.netScore}
                       </span>
                       <span className="text-white/10">•</span>
                       <span className="text-[10px] font-black uppercase tracking-widest text-white/30">
@@ -282,7 +277,7 @@ export default async function StatisticsPage() {
 
                   <div className="flex items-center gap-1 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
                     <Star className="h-3 w-3 fill-emerald-400 text-emerald-400" />
-                    <span className="text-xs font-black text-emerald-400">{item.avgScore.toFixed(1)}</span>
+                    <span className="text-xs font-black text-emerald-400">{item.netScore}</span>
                   </div>
                 </div>
               )) : (
