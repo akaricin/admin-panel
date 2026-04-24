@@ -7,33 +7,38 @@ import { ScoreFrequencyChart } from '@/components/DashboardCharts'
 export const revalidate = 0 // Data should be fresh
 
 export default async function StatisticsPage() {
-  // 1. Fetch Key Metrics
+  // 1. Parallelize Independent Base Fetches
+  const [
+    totalCaptionsRes,
+    allVotesRes,
+    flavorsRes,
+    allScoreRecordsRes
+  ] = await Promise.all([
+    adminSupabase.from('captions').select('*', { count: 'exact', head: true }),
+    adminSupabase.from('caption_votes').select('vote_value'),
+    adminSupabase.from('humor_flavors').select('id, name'),
+    // Fetch a large initial batch of scores; if we need more, we loop later
+    adminSupabase.from('caption_scores').select('total_votes').limit(1000)
+  ])
+
+  const totalCaptions = totalCaptionsRes.count
+  const allVotes = allVotesRes.data || []
+  const flavors = flavorsRes.data || []
   
-  // Total Captions
-  const { count: totalCaptions } = await adminSupabase
-    .from('captions')
-    .select('*', { count: 'exact', head: true })
-
-  // 2. Fetch all from caption_scores with pagination handling
-  let allScoreRecords: any[] = []
-  let fromS = 0
-  let toS = 999
-  let hasMoreS = true
-
-  while (hasMoreS) {
-    const { data: batch, error: batchError } = await adminSupabase
-      .from('caption_scores')
-      .select('total_votes')
-      .range(fromS, toS)
-
-    if (batchError) {
-      console.error('Error fetching caption_scores:', batchError.message)
-      hasMoreS = false
-    } else {
+  // 2. Handle caption_scores pagination (if more than 1000)
+  let allScoreRecords = allScoreRecordsRes.data || []
+  if (allScoreRecords.length === 1000) {
+    let fromS = 1000
+    let hasMoreS = true
+    while (hasMoreS) {
+      const { data: batch } = await adminSupabase
+        .from('caption_scores')
+        .select('total_votes')
+        .range(fromS, fromS + 999)
+      
       if (batch && batch.length > 0) {
         allScoreRecords = [...allScoreRecords, ...batch]
         fromS += 1000
-        toS += 1000
         if (batch.length < 1000) hasMoreS = false
       } else {
         hasMoreS = false
@@ -41,52 +46,50 @@ export default async function StatisticsPage() {
     }
   }
 
-  // Group by score (total_votes)
+  // 3. Process Scores Frequency Distribution (Optimized loop)
   const scoreFrequencyMap: Record<number, number> = {}
-  allScoreRecords.forEach(r => {
-    const score = Math.floor(r.total_votes || 0) // Ensure integer
-    if (score !== 0) { // Filter out 0 scores as requested
+  for (let i = 0; i < allScoreRecords.length; i++) {
+    const score = Math.floor(allScoreRecords[i].total_votes || 0)
+    if (score !== 0) {
       scoreFrequencyMap[score] = (scoreFrequencyMap[score] || 0) + 1
     }
-  })
+  }
 
   const scoreChartData = Object.entries(scoreFrequencyMap)
     .map(([score, freq]) => ({ score: parseInt(score), frequency: freq }))
     .sort((a, b) => a.score - b.score)
 
-  // Total Net Score
-  const { data: allVotes } = await adminSupabase
-    .from('caption_votes')
-    .select('vote_value')
+  // 4. Global Net Score
+  const totalVotesCount = allVotes.length
+  const totalNetScore = allVotes.reduce((acc, v) => acc + (v.vote_value || 0), 0)
 
-  const totalVotesCount = allVotes?.length || 0
-  const totalNetScore = allVotes?.reduce((acc, v) => acc + (v.vote_value || 0), 0) || 0
+  // 5. Fetch Captions with Votes for Flavor & Leaderboard (Parallelized)
+  const { data: captionsWithVotes } = await adminSupabase
+    .from('captions')
+    .select('id, humor_flavor_id, caption_votes(vote_value)')
 
-  // Top Performing Flavor
-  const [captionsRes, flavorsRes] = await Promise.all([
-    adminSupabase
-      .from('captions')
-      .select('id, humor_flavor_id, caption_votes(vote_value)'),
-    adminSupabase
-      .from('humor_flavors')
-      .select('id, name')
-  ])
-
-  const captions = captionsRes.data || []
-  const flavors = flavorsRes.data || []
+  const captions = captionsWithVotes || []
   const flavorMap = new Map(flavors.map(f => [f.id, f.name]))
-
   const flavorStats: Record<number, { sum: number, count: number }> = {}
   
-  captions.forEach(cap => {
-    const fid = (cap as any).humor_flavor_id
+  // Single pass for flavor stats and leaderboard preparation
+  const aggregatedCaptions = captions.map(cap => {
+    const votes = (cap.caption_votes as any[]) || []
+    const sum = votes.reduce((acc, v) => acc + v.vote_value, 0)
+    const count = votes.length
+
+    // Update Flavor Stats
+    const fid = cap.humor_flavor_id
     if (fid) {
       if (!flavorStats[fid]) flavorStats[fid] = { sum: 0, count: 0 }
-      const votes = (cap.caption_votes as any[]) || []
-      votes.forEach(v => {
-        flavorStats[fid].sum += v.vote_value
-        flavorStats[fid].count++
-      })
+      flavorStats[fid].sum += sum
+      flavorStats[fid].count += count
+    }
+
+    return {
+      ...cap,
+      netScore: sum,
+      totalVotes: count
     }
   })
 
@@ -101,20 +104,11 @@ export default async function StatisticsPage() {
   })
 
   // Leaderboard: Top 5
-  const aggregatedCaptions = captions.map(cap => {
-    const votes = (cap.caption_votes as any[]) || []
-    const sum = votes.reduce((acc, v) => acc + v.vote_value, 0)
-    const count = votes.length
-    return {
-      ...cap,
-      netScore: sum,
-      totalVotes: count
-    }
-  })
-  .sort((a, b) => b.netScore - a.netScore || b.totalVotes - a.totalVotes)
-  .slice(0, 5)
+  const top5Aggregated = [...aggregatedCaptions]
+    .sort((a, b) => b.netScore - a.netScore || b.totalVotes - a.totalVotes)
+    .slice(0, 5)
 
-  const topIds = aggregatedCaptions.map(c => c.id)
+  const topIds = top5Aggregated.map(c => c.id)
   const { data: leaderboardData } = await adminSupabase
     .from('captions')
     .select(`
@@ -124,7 +118,7 @@ export default async function StatisticsPage() {
     `)
     .in('id', topIds)
 
-  const leaderboard = aggregatedCaptions.map(ac => {
+  const leaderboard = top5Aggregated.map(ac => {
     const full = leaderboardData?.find(f => f.id === ac.id)
     return {
       ...ac,

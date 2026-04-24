@@ -123,12 +123,12 @@
   - Fixed Vote Volume graph on Admin Dashboard: [DONE]
     - Replaced incorrect column name 'created_at' with 'created_datetime_utc' in 'caption_votes' query.
     - Verified graph now correctly aggregates votes for the last 10 days.
-  - Refactored Engagement Statistics page for 1/-1 voting system: [DONE]
-    - Replaced 'Avg User Rating' with 'Global Net Score' (sum of all votes) to better represent interaction volume.
-    - Updated 'Top Performing Flavor' to be calculated based on total net score instead of misleading averages.
-    - Updated Leaderboard to sort by total net score, preventing low-volume unanimous captions from dominating the top spots.
-    - Refined UI labels and formatting to display 'Net Score' and 'Total Votes' consistently.
-
+  - Optimized Engagement Statistics page performance: [DONE]
+    - Implemented `Promise.all` to parallelize independent database fetches, reducing total page load time.
+    - Added `app/admin/statistics/loading.tsx` to provide instant UI feedback during navigation.
+    - Refactored data processing to use single-pass loops for flavor statistics and leaderboard preparation.
+    - Optimized `caption_scores` fetching by checking for more data only if the first batch is full.
+    - Verified successful production build.
 
 
 
