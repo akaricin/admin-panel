@@ -4,55 +4,41 @@ import Carousel from '@/components/Carousel'
 export const revalidate = 0 // Fresh data on every refresh
 
 export default async function HomePage() {
-  // 1. Fetch from captions table with specific columns
-  const { data: rawCaptions } = await adminSupabase
+  // 1. Fetch total count of captions with images to pick a random starting point
+  const { count: totalCaptions } = await adminSupabase
     .from('captions')
-    .select('id, caption_text, metadata, humor_flavor_id, image_id')
-    .order('created_at', { ascending: false })
-    .limit(30) // Fetch a pool to shuffle from
+    .select('*', { count: 'exact', head: true })
+    .not('image_id', 'is', null)
 
-  const captionsData = rawCaptions || []
-  
-  // 2. Extract specific IDs for lookup
-  const imageIds = [...new Set(captionsData.map(c => c.image_id).filter(Boolean))]
-  const flavorIds = [...new Set(captionsData.map(c => c.humor_flavor_id).filter(Boolean))]
+  const randomOffset = totalCaptions 
+    ? Math.floor(Math.random() * Math.max(0, totalCaptions - 30)) 
+    : 0
 
-  // 3. Fetch related records
-  const [flavorsRes, imagesRes] = await Promise.all([
-    adminSupabase.from('humor_flavors').select('id, name').in('id', flavorIds),
-    adminSupabase.from('images').select('id, url').in('id', imageIds)
-  ])
+  // 2. Single Joined Query: Fetch captions with their images and flavors
+  const { data: joinedData, error } = await adminSupabase
+    .from('captions')
+    .select(`
+      id,
+      content,
+      images (
+        url
+      ),
+      humor_flavors (
+        slug
+      )
+    `)
+    .not('image_id', 'is', null)
+    .range(randomOffset, randomOffset + 29)
 
-  const flavors = flavorsRes.data || []
-  const images = imagesRes.data || []
+  if (error) {
+    console.error('Error fetching carousel data:', error)
+  }
 
-  // 4. Create lookup maps
-  const flavorMap = new Map(flavors.map(f => [String(f.id), f.name]))
-  const imageMap = new Map((images || []).map(i => [String(i.id), i.url]))
+  const rawCaptions = joinedData || []
 
-  // 5. Parse and Clean Captions
+  // 3. Parse and Clean Captions
   const parseCaption = (item: any) => {
-    let text = item.caption_text
-    
-    // If caption_text is null, try parsing metadata
-    if (!text && item.metadata) {
-      try {
-        const meta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata
-        
-        // Extract topic_summary from caption_topic_plan as fallback
-        if (meta?.caption_topic_plan?.topic_summary) {
-          text = meta.caption_topic_plan.topic_summary
-        } else if (meta?.topic_summary) {
-          text = meta.topic_summary
-        } else if (typeof meta === 'string') {
-          text = meta
-        } else {
-          text = JSON.stringify(meta)
-        }
-      } catch (e) {
-        text = String(item.metadata)
-      }
-    }
+    let text = item.content
 
     // UI Cleanup: Remove any curly braces, quotes, or key names
     if (text) {
@@ -66,21 +52,22 @@ export default async function HomePage() {
     return text || 'Untitled Caption'
   }
 
-  // 6. Final Assembly & Shuffle
-  let carouselItems = captionsData.map(c => ({
+
+  // 4. Final Assembly
+  let carouselItems = rawCaptions.map(c => ({
     id: c.id,
     caption: parseCaption(c),
-    flavor: flavorMap.get(String(c.humor_flavor_id)) || 'Standard',
-    imageUrl: imageMap.get(String(c.image_id)) || null
+    flavor: (c.humor_flavors as any)?.slug || 'Standard',
+    imageUrl: (c.images as any)?.url || null
   }))
-  .filter(item => item.caption.length > 5 && !item.caption.includes('{'))
+  .filter(item => item.caption.length > 5 && !item.caption.includes('{') && item.imageUrl)
 
-  // Pseudo-Random Shuffle and Limit to 15
+  // Shuffle and Limit to 15-20
   carouselItems = carouselItems
     .sort(() => Math.random() - 0.5)
-    .slice(0, 15)
+    .slice(0, 20)
 
-  // 7. High-Quality MOCK Fallback if empty
+  // 5. High-Quality MOCK Fallback if empty
   if (carouselItems.length < 5) {
     const mocks = [
       { id: 'm1', flavor: 'Sarcastic', caption: "Oh look, another photo of your coffee. Revolutionary.", imageUrl: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80" },

@@ -129,6 +129,13 @@
     - Refactored data processing to use single-pass loops for flavor statistics and leaderboard preparation.
     - Optimized `caption_scores` fetching by checking for more data only if the first batch is full.
     - Verified successful production build.
+- Fixed Homepage Carousel Images: [DONE]
+    - Refactored `app/page.tsx` to use a single joined query for captions, images, and humor flavors.
+    - Resolved missing images by ensuring the database returns valid image URLs directly in the initial fetch.
+    - Implemented randomized starting offset to ensure the image wheel provides a fresh 20-item sample on each refresh.
+    - Corrected database column references: updated `caption_text` to `content` and `name` to `slug` for humor flavors.
+    - Simplified parsing logic to handle clean text while maintaining robust fallbacks.
+    - Verified image visibility and data integrity via diagnostic scripts.
 
 
 

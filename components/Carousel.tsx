@@ -76,7 +76,7 @@ export default function Carousel({ items }: Props) {
           100% { transform: translateX(calc(-400px * ${items.length})); }
         }
         .animate-scroll-right {
-          animation: scroll-right 40s linear infinite;
+          animation: scroll-right 100s linear infinite;
         }
         .pause-scroll {
           animation-play-state: paused;
